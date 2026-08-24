@@ -1,0 +1,54 @@
+name: generate metrics svg
+
+on:
+  schedule:
+    # Off-peak minute so the render does not collide with the fleet at :00.
+    - cron: "23 3 * * *"
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  github-metrics:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      # Needed so the rendered SVG can be committed back to this repo.
+      contents: write
+
+    steps:
+      # Pinned to v3.34 (the current release) instead of @latest so a new
+      # upstream version cannot change the render without a commit here.
+      #
+      # token must be a classic PAT stored as the METRICS_TOKEN secret, not
+      # GITHUB_TOKEN: the action reads data beyond this single repository.
+      # Scopes: repo + read:user. Private contributions only show up if the
+      # PAT carries repo scope AND the profile setting is enabled.
+      - name: Render metrics
+        uses: lowlighter/metrics@v3.34
+        with:
+          token: ${{ secrets.METRICS_TOKEN }}
+          filename: metrics.svg
+          user: kinoyxxxx
+          template: classic
+          base: header, activity, community, repositories, metadata
+          config_timezone: Asia/Makassar
+
+          # Phosphor-green terminal palette, matched to the README.
+          config_display: large
+          config_animations: true
+
+          plugin_languages: true
+          plugin_languages_details: bytes-size, percentage
+          plugin_languages_limit: 8
+          plugin_languages_sections: most-used
+          # Count private repos too, so the Charon work is reflected.
+          plugin_languages_ignored: >-
+            html, css, scss, dockerfile, makefile, shell
+
+          plugin_isocalendar: true
+          plugin_isocalendar_duration: half-year
+
+          plugin_lines: true
+          plugin_lines_sections: base
